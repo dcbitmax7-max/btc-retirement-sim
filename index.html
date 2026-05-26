@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>₿ BTC 은퇴 전략 시뮬레이터</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fafaf9;--bg2:#f0efed;--bg3:#e7e5e2;--bg4:#ddd9d5;
+  --t1:#1a1a2e;--t2:#555;--t3:#888;--t4:#aaa;
+  --accent:#c8850a;--accent2:#a06800;--accent-light:rgba(200,133,10,.07);
+  --blue:#2563eb;--green:#16a34a;--red:#dc2626;--purple:#7c3aed;
+  --cyan:#0891b2;--orange:#ea580c;--pink:#db2777;--teal:#0d9488;
+  --border:rgba(0,0,0,.06);--bh:rgba(0,0,0,.12);
+  --card-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 20px rgba(0,0,0,.03);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#111114;--bg2:#1a1a1e;--bg3:#242428;--bg4:#2e2e34;
+  --t1:rgba(255,255,255,.92);--t2:rgba(255,255,255,.6);--t3:rgba(255,255,255,.38);--t4:rgba(255,255,255,.22);
+  --accent:#f0b860;--accent2:#d4a040;--accent-light:rgba(240,184,96,.06);
+  --blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#a78bfa;
+  --cyan:#22d3ee;--orange:#fb923c;--pink:#f472b6;--teal:#2dd4bf;
+  --border:rgba(255,255,255,.06);--bh:rgba(255,255,255,.1);
+  --card-shadow:0 1px 4px rgba(0,0,0,.3),0 4px 20px rgba(0,0,0,.2);
+}}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+
+.hdr{display:flex;align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap}
+.hdr h1{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.hdr .badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;color:var(--accent);background:var(--accent-light);border:1px solid rgba(200,133,10,.12);padding:3px 10px;border-radius:20px;letter-spacing:1px;white-space:nowrap}
+.sub{font-size:12px;color:var(--t3);line-height:1.7;margin-bottom:24px;max-width:760px}
+.sub b{color:var(--t2);font-weight:500}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.tab{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--t3);cursor:pointer;transition:all .15s;user-select:none;letter-spacing:.3px}
+.tab:hover{border-color:var(--bh);color:var(--t2)}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+@media(prefers-color-scheme:dark){.tab.active{color:#111}}
+
+/* Controls */
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:22px}
+.ctrl{background:var(--bg2);border-radius:12px;padding:12px 14px;border:1px solid var(--border)}
+.ctrl label{display:block;font-size:9px;color:var(--t3);margin-bottom:2px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase}
+.ctrl .val{font-size:20px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-bottom:5px;letter-spacing:-.5px}
+.ctrl .val .unit{font-size:11px;font-weight:400;color:var(--t3);margin-left:2px}
+.ctrl input[type=range]{width:100%;accent-color:var(--accent);height:4px;margin:0}
+.ctrl.hide{display:none}
+
+/* Summary */
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px}
+.scard{background:var(--bg2);border-radius:12px;padding:14px;border:1px solid var(--border);box-shadow:var(--card-shadow)}
+.scard .sl{font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
+.scard .sv{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:-.5px}
+.scard .ss{font-size:10px;color:var(--t3);margin-top:3px;line-height:1.5}
+.scard.warn{border-color:rgba(220,38,38,.2);background:rgba(220,38,38,.03)}
+.scard.good{border-color:rgba(22,163,74,.15);background:rgba(22,163,74,.03)}
+@media(prefers-color-scheme:dark){.scard.warn{background:rgba(248,113,113,.04);border-color:rgba(248,113,113,.15)}.scard.good{background:rgba(74,222,128,.04);border-color:rgba(74,222,128,.12)}}
+
+/* Chart */
+.chart-box{background:var(--bg2);border-radius:14px;padding:18px 14px 12px;border:1px solid var(--border);margin-bottom:20px;box-shadow:var(--card-shadow);overflow-x:auto}
+.chart-title{font-size:12px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.chart-title .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+canvas{display:block;width:100%;cursor:crosshair}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;padding:0 4px}
+.legend span{font-size:9px;color:var(--t3);display:flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace}
+.legend i{width:10px;height:3px;border-radius:2px;display:inline-block}
+
+/* Table */
+.tbl-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);margin-bottom:16px;max-height:500px}
+table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:10px}
+thead th{position:sticky;top:0;background:var(--bg3);padding:9px 6px;font-weight:600;font-size:9px;text-align:center;border-bottom:2px solid var(--border);letter-spacing:.3px;white-space:nowrap;z-index:2}
+thead th:first-child{text-align:left;min-width:50px}
+tbody td{padding:7px 6px;text-align:center;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+tbody td:first-child{text-align:left;font-weight:500;background:var(--bg2);white-space:nowrap;color:var(--t2);position:sticky;left:0;z-index:1}
+tbody tr:hover td{background:var(--accent-light)}
+.td-warn{color:var(--red);font-weight:600}
+.td-ok{color:var(--green)}
+.td-caution{color:var(--orange)}
+
+/* Compare */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:800px){.compare-grid{grid-template-columns:1fr}}
+.compare-grid .panel{background:var(--bg2);border-radius:12px;padding:14px;border:1px solid var(--border)}
+.compare-grid .panel-title{font-size:10px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.compare-grid .panel-title .tag{font-size:8px;padding:2px 7px;border-radius:10px;font-weight:500;font-family:'JetBrains Mono',monospace}
+.tagA{background:rgba(234,88,12,.1);color:var(--orange)}
+.tagB{background:rgba(37,99,235,.1);color:var(--blue)}
+.tagC{background:rgba(124,58,237,.1);color:var(--purple)}
+@media(prefers-color-scheme:dark){.tagA{background:rgba(251,146,60,.1)}.tagB{background:rgba(96,165,250,.1)}.tagC{background:rgba(167,139,250,.1)}}
+
+/* Note */
+.note{font-size:10px;color:var(--t3);line-height:1.7;text-align:center;padding:14px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)}
+.note b{color:var(--t2);font-weight:500}
+
+/* Tooltip */
+.tip{position:fixed;pointer-events:none;z-index:50;background:rgba(255,255,255,.97);border:1px solid var(--border);border-radius:8px;padding:10px 14px;backdrop-filter:blur(12px);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t1);line-height:1.9;white-space:nowrap;display:none;box-shadow:0 6px 24px rgba(0,0,0,.1)}
+@media(prefers-color-scheme:dark){.tip{background:rgba(26,26,30,.96);box-shadow:0 6px 24px rgba(0,0,0,.4)}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hdr">
+  <h1>₿ BTC 은퇴 전략 시뮬레이터</h1>
+  <span class="badge">PERRENOD POWER LAW · 3전략 비교</span>
+</div>
+<div class="sub">
+  세 가지 BTC 은퇴 전략을 시뮬레이션합니다.<br>
+  <b>전략A</b> 매년 필요한 만큼 BTC 매도 · <b>전략B</b> 담보대출 (순수 HODL) · <b>전략C</b> 나스닥100 4%룰<br>
+  ※ 감쇠함수 지지선 기준 <b>청산 위험도</b> 표시 · 마지막에 <b>남는 BTC·원화</b> · 부족 시 <b>현재 기준 필요 자금</b> 표시
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-m="A">A · BTC 매도</div>
+  <div class="tab" data-m="C">B · 순수 HODL 대출</div>
+  <div class="tab" data-m="D">C · 나스닥 4%룰</div>
+  <div class="tab" data-m="ALL">전략 비교</div>
+</div>
+
+<div class="controls" id="ctrls">
+  <div class="ctrl">
+    <label>보유 BTC</label>
+    <div class="val"><span id="vBtc">0.10</span><span class="unit">BTC</span></div>
+    <input type="range" min="0" max="200" value="40" step="1" id="sBtc">
+  </div>
+  <div class="ctrl">
+    <label>은퇴 연도</label>
+    <div class="val"><span id="vYr">2056</span></div>
+    <input type="range" min="2027" max="2070" value="2056" step="1" id="sYr">
+  </div>
+  <div class="ctrl">
+    <label>생활 기간</label>
+    <div class="val"><span id="vLife">40</span><span class="unit">년</span></div>
+    <input type="range" min="10" max="50" value="40" step="5" id="sLife">
+  </div>
+  <div class="ctrl">
+    <label>월 생활비 (2026 기준)</label>
+    <div class="val">₩<span id="vExp">500</span><span class="unit">만</span></div>
+    <input type="range" min="50" max="3000" value="500" step="50" id="sExp">
+  </div>
+  <div class="ctrl ctrl-loan">
+    <label>대출 이자율 (연)</label>
+    <div class="val"><span id="vRate">8</span><span class="unit">%</span></div>
+    <input type="range" min="3" max="15" value="8" step="0.5" id="sRate">
+  </div>
+  <div class="ctrl ctrl-loan">
+    <label>최대 LTV</label>
+    <div class="val"><span id="vLtv">50</span><span class="unit">%</span></div>
+    <input type="range" min="25" max="75" value="50" step="5" id="sLtv">
+  </div>
+  <div class="ctrl ctrl-loan">
+    <label>청산 LTV</label>
+    <div class="val"><span id="vLiq">80</span><span class="unit">%</span></div>
+    <input type="range" min="60" max="95" value="80" step="5" id="sLiq">
+  </div>
+  <div class="ctrl">
+    <label>물가상승률</label>
+    <div class="val"><span id="vInf">3</span><span class="unit">%</span></div>
+    <input type="range" min="0" max="8" value="3" step="0.5" id="sInf">
+  </div>
+  <div class="ctrl ctrl-nq">
+    <label>나스닥 CAGR</label>
+    <div class="val"><span id="vCagr">12</span><span class="unit">%</span></div>
+    <input type="range" min="6" max="18" value="12" step="1" id="sCagr">
+  </div>
+  <div class="ctrl ctrl-tax">
+    <label>양도세율 (매도 시)</label>
+    <div class="val"><span id="vTax">22</span><span class="unit">%</span></div>
+    <input type="range" min="0" max="45" value="22" step="1" id="sTax">
+  </div>
+  <div class="ctrl">
+    <label>가격 기준</label>
+    <div class="val"><span id="vBasis">지지선</span></div>
+    <input type="range" min="0" max="2" value="2" step="1" id="sBasis">
+  </div>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<div class="chart-box">
+  <div class="chart-title"><span class="dot" style="background:var(--accent)"></span>연도별 시뮬레이션</div>
+  <div class="legend" id="legendBar"></div>
+  <canvas id="chart" height="360"></canvas>
+</div>
+
+<div class="compare-grid" id="compareArea" style="display:none"></div>
+<div class="tbl-wrap"><table id="tbl"></table></div>
+<div class="note" id="noteBox"></div>
+
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+// ═══════════ MODEL ═══════════
+const GEN=2009+2/365.25, FX=1500, BASE_YEAR=2026;
+function btcAge(yr){return yr-GEN;}
+function btcPrice(yr){const d=(yr-GEN)*365.25;return d>0?2.75e-17*Math.pow(d,5.685):0;}
+function decaySupportPrice(yr){const A=btcAge(yr);return A>0?btcPrice(yr)*Math.pow(10,-3.8/(A+2)):0;}
+// 가격 기준 래퍼: basis 0=추세선, 1=중간, 2=지지선
+function usedPrice(yr){
+  const trend=btcPrice(yr);
+  if(P.basis===0) return trend;
+  const support=decaySupportPrice(yr);
+  if(P.basis===2) return support;
+  return Math.sqrt(trend*support); // 기하평균 (중간)
+}
+const NOW_PRICE=btcPrice(2026);
+
+function fU(v){if(!isFinite(v)||isNaN(v))return'—';if(v>=1e12)return'$'+(v/1e12).toFixed(1)+'T';if(v>=1e9)return'$'+(v/1e9).toFixed(1)+'B';if(v>=1e6)return'$'+(v/1e6).toFixed(1)+'M';if(v>=1e3)return'$'+Math.round(v/1e3).toLocaleString()+'K';return'$'+Math.round(v).toLocaleString();}
+function fK(usd){const w=usd*FX;if(w>=1e12)return'₩'+(w/1e12).toFixed(1)+'조';if(w>=1e8)return'₩'+(w/1e8).toFixed(1)+'억';if(w>=1e4)return'₩'+Math.round(w/1e4).toLocaleString()+'만';return'₩'+Math.round(w).toLocaleString();}
+function fKs(krw){if(krw>=1e12)return(krw/1e12).toFixed(1)+'조';if(krw>=1e8)return(krw/1e8).toFixed(1)+'억';return Math.round(krw/1e4).toLocaleString()+'만';}
+function fB(v){if(!isFinite(v)||isNaN(v))return'—';if(v>=100)return v.toFixed(0);if(v>=10)return v.toFixed(1);if(v>=1)return v.toFixed(2);if(v>=0.1)return v.toFixed(3);if(v>=0.01)return v.toFixed(4);return v.toFixed(5);}
+function fP(v){return(v*100).toFixed(1)+'%';}
+
+// ═══════════ STATE ═══════════
+let P={btc:2,retireYr:2035,lifeYrs:30,monthlyKrw:5e6,rate:0.08,maxLtv:0.5,liqLtv:0.8,inflation:0.03,cagr:0.12,taxRate:0.22,basis:0};
+let mode='A';
+
+const els={};
+['Btc','Yr','Life','Exp','Rate','Ltv','Liq','Inf','Cagr','Tax','Basis'].forEach(k=>{
+  els['v'+k]=document.getElementById('v'+k);
+  els['s'+k]=document.getElementById('s'+k);
+});
+
+// 비선형 BTC 슬라이더
+function sliderToBtc(v){
+  if(v<=40)return 0.01+(v/40)*0.09;
+  if(v<=80)return 0.10+((v-40)/40)*0.40;
+  if(v<=120)return 0.50+((v-80)/40)*2.50;
+  if(v<=160)return 3.00+((v-120)/40)*7.00;
+  return 10.0+((v-160)/40)*11.0;
+}
+
+function readUI(){
+  P.btc=sliderToBtc(+els.sBtc.value);
+  P.retireYr=+els.sYr.value; P.lifeYrs=+els.sLife.value;
+  P.monthlyKrw=+els.sExp.value*1e4; P.rate=+els.sRate.value/100;
+  P.maxLtv=+els.sLtv.value/100; P.liqLtv=+els.sLiq.value/100;
+  P.inflation=+els.sInf.value/100;
+  P.cagr=+els.sCagr.value/100;
+  P.taxRate=+els.sTax.value/100;
+  P.basis=+els.sBasis.value;
+  els.vBtc.textContent=P.btc>=10?P.btc.toFixed(1):P.btc.toFixed(2);
+  els.vYr.textContent=P.retireYr;
+  els.vLife.textContent=P.lifeYrs;
+  els.vExp.textContent=Math.round(P.monthlyKrw/1e4);
+  els.vRate.textContent=(P.rate*100)%1===0?(P.rate*100).toFixed(0):(P.rate*100).toFixed(1);
+  els.vLtv.textContent=Math.round(P.maxLtv*100);
+  els.vLiq.textContent=Math.round(P.liqLtv*100);
+  els.vInf.textContent=(P.inflation*100)%1===0?(P.inflation*100).toFixed(0):(P.inflation*100).toFixed(1);
+  els.vCagr.textContent=Math.round(P.cagr*100);
+  els.vTax.textContent=Math.round(P.taxRate*100);
+  els.vBasis.textContent=['추세선','중간','지지선'][P.basis];
+  // 전략별 컨트롤 표시
+  document.querySelectorAll('.ctrl-loan').forEach(el=>{
+    el.classList.toggle('hide', mode==='A'||mode==='D');
+  });
+  document.querySelectorAll('.ctrl-nq').forEach(el=>{
+    el.classList.toggle('hide', mode!=='D'&&mode!=='ALL');
+  });
+  document.querySelectorAll('.ctrl-tax').forEach(el=>{
+    el.classList.toggle('hide', mode==='C');
+  });
+}
+
+function annualKrw(yr){return P.monthlyKrw*12*Math.pow(1+P.inflation, yr-BASE_YEAR);}
+function annualUsd(yr){return annualKrw(yr)/FX;}
+
+// 의제취득가액: 2026년 12월 31일 추세선 가격 (USD)
+const DEEMED_COST=btcPrice(2027); // 2026.12.31 ≈ 2027.0
+const TAX_EXEMPT_KRW=2500000; // 연 250만원 공제
+const TAX_EXEMPT_USD=TAX_EXEMPT_KRW/FX;
+
+// 세금 계산: 매도 차익에 대한 양도세
+// gain = (매도가 - 의제취득가) × 매도수량
+// tax = max(0, gain - 공제) × taxRate
+// 리턴: {grossUsd, netUsd, taxUsd, taxKrw}
+function calcTax(soldBtc, sellPrice, taxRate, yearlyExemptUsed){
+  if(taxRate<=0 || soldBtc<=0) return {grossUsd:soldBtc*sellPrice, netUsd:soldBtc*sellPrice, taxUsd:0, taxKrw:0};
+  const grossUsd=soldBtc*sellPrice;
+  const costBasis=soldBtc*DEEMED_COST; // 의제취득가
+  const gain=Math.max(0, grossUsd-costBasis);
+  const taxableGain=Math.max(0, gain-(!yearlyExemptUsed?TAX_EXEMPT_USD:0));
+  const taxUsd=taxableGain*taxRate;
+  return {grossUsd, netUsd:grossUsd-taxUsd, taxUsd, taxKrw:taxUsd*FX};
+}
+
+// ═══════════ 전략A: 매년 BTC 매도 (세금 적용) ═══════════
+// 매년 생활비+세금 포함해서 충분한 BTC를 매도해야 함
+function simSell(p){
+  const rows=[];
+  let remaining=p.btc;
+  let failed=false, failYr=0;
+  let totalSold=0, totalSpentUsd=0, totalTaxUsd=0;
+  for(let y=0;y<p.lifeYrs;y++){
+    const yr=p.retireYr+y;
+    const price=usedPrice(yr);
+    const aUsd=annualUsd(yr);
+    const aKrw=annualKrw(yr);
+
+    // 세금 포함 매도량 계산: 매도 → 세금 차감 → 실수령이 생활비 이상이어야
+    let neededBtc;
+    if(p.taxRate<=0 || price<=DEEMED_COST){
+      neededBtc=aUsd/price;
+    } else {
+      // 초기 추정
+      const gainRatio=Math.max(0, 1-DEEMED_COST/price);
+      const effectiveTax=p.taxRate*gainRatio;
+      neededBtc=aUsd/(price*(1-effectiveTax));
+      // 뉴턴법 3회 반복으로 정밀도 확보
+      for(let iter=0;iter<3;iter++){
+        const t=calcTax(neededBtc, price, p.taxRate, false);
+        if(t.netUsd>=aUsd*0.9999) break;
+        const gap=aUsd-t.netUsd;
+        neededBtc+=gap/price/(1-effectiveTax);
+      }
+    }
+
+    const sold=Math.min(neededBtc, remaining);
+    const tax=calcTax(sold, price, p.taxRate, false);
+    const netReceived=tax.netUsd;
+    const shortfall=Math.max(0, aUsd-netReceived);
+    remaining-=sold;
+    totalSold+=sold;
+    totalSpentUsd+=aUsd;
+    totalTaxUsd+=tax.taxUsd;
+    if(shortfall>aUsd*0.01 && !failed){failed=true;failYr=yr;}
+    const remainValue=remaining*price;
+    rows.push({yr, price, remaining, sold, aUsd, aKrw, shortfall, remainValue, needed:neededBtc, totalSold,
+      taxUsd:tax.taxUsd, taxKrw:tax.taxKrw, netReceived});
+  }
+  const lastYr=p.retireYr+p.lifeYrs-1;
+  const lastPrice=usedPrice(lastYr);
+  return {rows, failed, failYr, remaining, remainValueUsd:remaining*lastPrice, totalSold, totalSpentUsd, totalTaxUsd};
+}
+
+// ═══════════ 전략B: 담보대출 + 이자는 BTC 매도 (세금 적용) ═══════════
+function simLoanSellInterest(p){
+  const rows=[];
+  let btcHeld=p.btc;
+  let totalDebt=0, totalBorrowed=0, totalSoldBtc=0, totalTaxUsd=0;
+  let failed=false, failYr=0;
+  for(let y=0;y<p.lifeYrs;y++){
+    const yr=p.retireYr+y;
+    const price=usedPrice(yr);
+    const supPrice=decaySupportPrice(yr);
+    const aUsd=annualUsd(yr);
+    const aKrw=annualKrw(yr);
+
+    // 이자 발생 → BTC 매도로 납부 (세금 포함)
+    const interest=totalDebt*p.rate;
+    // 이자를 내려면 세금 포함 더 많이 팔아야 함
+    let interestBtcNeeded;
+    if(p.taxRate<=0 || price<=DEEMED_COST){
+      interestBtcNeeded=interest/price;
+    } else {
+      const gainRatio=Math.max(0,1-DEEMED_COST/price);
+      const eff=p.taxRate*gainRatio;
+      interestBtcNeeded=(interest/(1-eff))/price;
+    }
+    const soldForInterest=Math.min(interestBtcNeeded, btcHeld);
+    const intTax=calcTax(soldForInterest, price, p.taxRate, false);
+    const interestPaid=intTax.netUsd;
+    btcHeld-=soldForInterest;
+    totalSoldBtc+=soldForInterest;
+    totalTaxUsd+=intTax.taxUsd;
+    const unpaidInterest=Math.max(0, interest-interestPaid);
+
+    totalDebt+=unpaidInterest;
+
+    const collateral=btcHeld*price;
+    const maxLoan=collateral*p.maxLtv;
+    const availLoan=Math.max(0, maxLoan-totalDebt);
+    const borrow=Math.min(availLoan, aUsd);
+    totalDebt+=borrow;
+    totalBorrowed+=borrow;
+    const shortfall=aUsd-borrow;
+
+    const currentLtv=collateral>0?totalDebt/collateral:999;
+    const worstCollateral=btcHeld*supPrice;
+    const worstLtv=worstCollateral>0?totalDebt/worstCollateral:999;
+    const liqRisk=worstLtv>=p.liqLtv;
+
+    if(shortfall>aUsd*0.01 && !failed){failed=true;failYr=yr;}
+
+    rows.push({yr, price, supPrice, btcHeld, totalDebt, aUsd, aKrw,
+      interest, soldForInterest, borrow, shortfall,
+      collateral, currentLtv, worstLtv, liqRisk, totalBorrowed, totalSoldBtc,
+      taxUsd:intTax.taxUsd});
+  }
+  const lastYr=p.retireYr+p.lifeYrs-1;
+  const lastPrice=usedPrice(lastYr);
+  return {rows, failed, failYr, btcHeld, remainValueUsd:btcHeld*lastPrice, totalDebt, totalBorrowed, totalSoldBtc, totalTaxUsd};
+}
+
+// ═══════════ 전략C: 담보대출 + 이자도 대출 (순수 HODL) ═══════════
+// BTC 한 개도 안 팔고, 생활비+이자 전부 대출. 부채가 빠르게 쌓임.
+function simLoanHodl(p){
+  const rows=[];
+  let totalDebt=0, totalBorrowed=0;
+  let failed=false, failYr=0;
+  for(let y=0;y<p.lifeYrs;y++){
+    const yr=p.retireYr+y;
+    const price=usedPrice(yr);
+    const supPrice=decaySupportPrice(yr);
+    const aUsd=annualUsd(yr);
+    const aKrw=annualKrw(yr);
+
+    const interest=totalDebt*p.rate;
+    const totalNeed=interest+aUsd;
+
+    const collateral=p.btc*price;
+    const maxLoan=collateral*p.maxLtv;
+    const availLoan=Math.max(0, maxLoan-totalDebt);
+    const borrow=Math.min(availLoan, totalNeed);
+    totalDebt+=borrow;
+    totalBorrowed+=borrow;
+    const shortfall=totalNeed-borrow;
+
+    const currentLtv=collateral>0?totalDebt/collateral:999;
+    const worstCollateral=p.btc*supPrice;
+    const worstLtv=worstCollateral>0?totalDebt/worstCollateral:999;
+    const liqRisk=worstLtv>=p.liqLtv;
+
+    if(shortfall>totalNeed*0.01 && !failed){failed=true;failYr=yr;}
+
+    rows.push({yr, price, supPrice, btcHeld:p.btc, totalDebt, aUsd, aKrw,
+      interest, borrow, shortfall, totalNeed,
+      collateral, currentLtv, worstLtv, liqRisk, totalBorrowed});
+  }
+  const lastYr=p.retireYr+p.lifeYrs-1;
+  const lastPrice=usedPrice(lastYr);
+  return {rows, failed, failYr, btcHeld:p.btc, remainValueUsd:p.btc*lastPrice, totalDebt, totalBorrowed};
+}
+
+// ═══════════ 전략D: 나스닥100 4% 룰 (양도세 적용) ═══════════
+function simNasdaq(p){
+  const rows=[];
+  const initInvestUsd=p.btc*NOW_PRICE;
+  const yearsToRetire=p.retireYr-BASE_YEAR;
+  let portfolio=initInvestUsd*Math.pow(1+p.cagr, yearsToRetire);
+  const portfolioAtRetire=portfolio;
+  const costBasis=initInvestUsd; // 원래 투자금이 취득가
+  const firstWithdraw=portfolio*0.04;
+  let failed=false, failYr=0;
+  let totalWithdrawn=0, totalTaxUsd=0;
+  let cumulativeWithdrawn=0; // 누적 인출 (비율로 cost basis 계산)
+  for(let y=0;y<p.lifeYrs;y++){
+    const yr=p.retireYr+y;
+    const aUsd=annualUsd(yr);
+    const aKrw=annualKrw(yr);
+    const withdraw4pct=firstWithdraw*Math.pow(1+p.inflation, y);
+    const grossWithdraw=Math.min(withdraw4pct, portfolio);
+
+    // 양도세: 인출분 중 차익 부분에 과세
+    // 차익 비율 = 1 - (costBasis / 현재포트폴리오가치) 근사
+    const gainRatio=portfolio>0?Math.max(0, 1-costBasis*(1-cumulativeWithdrawn/(costBasis+portfolio))/portfolio):0;
+    const gain=grossWithdraw*gainRatio;
+    const taxableGain=Math.max(0, gain-TAX_EXEMPT_USD);
+    const taxUsd=taxableGain*p.taxRate;
+    const netWithdraw=grossWithdraw-taxUsd;
+    totalTaxUsd+=taxUsd;
+
+    const shortfall=Math.max(0, withdraw4pct-grossWithdraw);
+    portfolio-=grossWithdraw;
+    cumulativeWithdrawn+=grossWithdraw;
+    portfolio*=(1+p.cagr);
+    totalWithdrawn+=netWithdraw;
+    if(shortfall>withdraw4pct*0.01 && !failed){failed=true;failYr=yr;}
+    rows.push({yr, portfolio, withdraw4pct, actualWithdraw:grossWithdraw, netWithdraw, taxUsd, shortfall, aUsd, aKrw, totalWithdrawn,
+      btcEquiv:portfolio/btcPrice(yr), withdrawKrw:netWithdraw*FX});
+  }
+  return {rows, failed, failYr, portfolio, portfolioAtRetire, initInvestUsd, totalWithdrawn, totalTaxUsd,
+    remaining:0, btcHeld:0, remainValueUsd:portfolio};
+}
+
+// ═══════════ 부족 시 현재 기준 환산 ═══════════
+function shortfallInfo(res){
+  // 총 부족 USD 합산
+  let totalShortUsd=0;
+  for(const r of res.rows) totalShortUsd+=r.shortfall||0;
+  if(totalShortUsd<1) return null;
+  const nowBtc=totalShortUsd/NOW_PRICE;
+  const nowKrw=totalShortUsd*FX;
+  return {totalShortUsd, nowBtc, nowKrw};
+}
+
+// ═══════════ RENDER ═══════════
+function render(){
+  readUI();
+  const rA=simSell(P), rC=simLoanHodl(P), rD=simNasdaq(P);
+
+  renderSummary(rA,rC,rD);
+  if(mode==='ALL'){renderCompareChart(rA,rC,rD);renderCompare(rA,rC,rD);renderCompareTable(rA,rC,rD);}
+  else if(mode==='D'){renderChart(rD,'D');renderTable(rD,'D');document.getElementById('compareArea').style.display='none';}
+  else{const r=mode==='A'?rA:rC;renderChart(r,mode);renderTable(r,mode);document.getElementById('compareArea').style.display='none';}
+  renderNote();
+}
+
+// ═══════════ SUMMARY ═══════════
+function renderSummary(rA,rC,rD){
+  const r=mode==='A'?rA:mode==='C'?rC:mode==='D'?rD:rA;
+  const initPrice=usedPrice(P.retireYr);
+  let h='';
+
+  if(mode==='D'){
+    const lastRow=rD.rows[rD.rows.length-1];
+    const sf=shortfallInfo(rD);
+    h+=`<div class="scard"><div class="sl">초기 투자금 (2026)</div><div class="sv" style="color:var(--teal)">${fU(rD.initInvestUsd)}</div><div class="ss">${fB(P.btc)} BTC 가격 = ${fK(rD.initInvestUsd)}<br>나스닥100 CAGR ${Math.round(P.cagr*100)}%로 투자</div></div>`;
+    h+=`<div class="scard"><div class="sl">은퇴 시 포트폴리오</div><div class="sv" style="color:var(--green)">${fU(rD.portfolioAtRetire)}</div><div class="ss">${fK(rD.portfolioAtRetire)}<br>${P.retireYr-BASE_YEAR}년간 ${Math.round(P.cagr*100)}% 복리 성장</div></div>`;
+    h+=`<div class="scard"><div class="sl">최종 잔액</div><div class="sv" style="color:${lastRow.portfolio>0?'var(--green)':'var(--red)'}">${fU(lastRow.portfolio)}</div><div class="ss">${fK(lastRow.portfolio)}<br>총 인출 ${fU(rD.totalWithdrawn)}<br><span style="color:var(--red)">총 세금 ${fU(rD.totalTaxUsd)} (${fK(rD.totalTaxUsd)})</span></div></div>`;
+    if(sf){
+      h+=`<div class="scard warn"><div class="sl">⚠ 자금 소진</div><div class="sv" style="color:var(--red)">${rD.failYr}년</div><div class="ss">부족분: ${fU(sf.totalShortUsd)}<br>현재 ${fB(sf.nowBtc)} BTC (${fK(sf.totalShortUsd)})</div></div>`;
+    } else {
+      h+=`<div class="scard good"><div class="sl">✓ 유지 가능</div><div class="sv" style="color:var(--green)">${P.lifeYrs}년 전체</div><div class="ss">4% 룰 + CAGR ${Math.round(P.cagr*100)}% 유지</div></div>`;
+    }
+  } else if(mode==='ALL'){
+    h+=`<div class="scard"><div class="sl">은퇴 시 BTC 가치</div><div class="sv" style="color:var(--accent)">${fU(P.btc*initPrice)}</div><div class="ss">${fB(P.btc)} BTC × ${fU(initPrice)}<br>${fK(P.btc*initPrice)}</div></div>`;
+    [['A',rA,'--orange'],['B',rC,'--purple']].forEach(([n,res,col])=>{
+      const sf=shortfallInfo(res);
+      h+=`<div class="scard ${res.failed?'warn':'good'}"><div class="sl">전략${n} ${n==='A'?'잔여':'잔여'} BTC</div><div class="sv" style="color:var(${col})">${fB(res.btcHeld||res.remaining||0)}</div><div class="ss">${fK(res.remainValueUsd)}${res.totalDebt?' · 부채 '+fU(res.totalDebt):''}${res.failed?'<br>⚠ '+res.failYr+'년 부족':'<br>✓ 유지 가능'}${sf?'<br>부족분: 현재 '+fB(sf.nowBtc)+' BTC ('+fK(sf.totalShortUsd)+')':''}</div></div>`;
+    });
+    const sfD=shortfallInfo(rD);
+    const lastD=rD.rows[rD.rows.length-1];
+    h+=`<div class="scard ${rD.failed?'warn':'good'}"><div class="sl">전략C 나스닥 잔액</div><div class="sv" style="color:var(--teal)">${fU(lastD.portfolio)}</div><div class="ss">${fK(lastD.portfolio)}${rD.failed?'<br>⚠ '+rD.failYr+'년 소진':'<br>✓ 유지 가능'}${sfD?'<br>부족분: 현재 '+fB(sfD.nowBtc)+' BTC ('+fK(sfD.totalShortUsd)+')':''}</div></div>`;
+  } else {
+    // 카드2: 잔여 BTC
+    const endBtc=r.remaining!==undefined?r.remaining:r.btcHeld;
+    const lastYr=P.retireYr+P.lifeYrs-1;
+    const endPrice=usedPrice(lastYr);
+    h+=`<div class="scard good"><div class="sl">${lastYr}년 잔여 BTC</div><div class="sv" style="color:var(--green)">${fB(endBtc)}<span style="font-size:12px;color:var(--t3)"> BTC</span></div><div class="ss">${fU(endBtc*endPrice)} · ${fK(endBtc*endPrice)}<br>BTC 가격 ${fU(endPrice)}</div></div>`;
+
+    if(mode==='A'){
+      h+=`<div class="scard"><div class="sl">총 매도 BTC</div><div class="sv">${fB(r.totalSold)}<span style="font-size:12px;color:var(--t3)"> BTC</span></div><div class="ss">시작 ${fB(P.btc)} → 잔여 ${fB(r.remaining)}<br><span style="color:var(--red)">총 세금 ${fU(r.totalTaxUsd||0)} (${fK(r.totalTaxUsd||0)})</span></div></div>`;
+    } else {
+      const lastPrice=usedPrice(P.retireYr+P.lifeYrs-1);
+      const debtBtc=lastPrice>0?r.totalDebt/lastPrice:0;
+      const totalInterest=r.totalDebt-r.totalBorrowed;
+      h+=`<div class="scard warn"><div class="sl">📋 누적 부채</div><div class="sv" style="color:var(--red)">${fU(r.totalDebt)}</div><div class="ss">원금 ${fU(r.totalBorrowed)} + 이자 ${fU(totalInterest>0?totalInterest:0)}<br>BTC 환산 ${fB(debtBtc)} BTC (${fK(r.totalDebt)})<br>순자산 ${fU(r.remainValueUsd-r.totalDebt)} · 세금 ₩0</div></div>`;
+    }
+
+    // 카드4: 부족 정보 또는 성공 (전략B일 때 상속 BTC 표시)
+    const sf=shortfallInfo(r);
+    if(sf){
+      h+=`<div class="scard warn"><div class="sl">⚠ 부족분 (현재 기준)</div><div class="sv" style="color:var(--red)">${fB(sf.nowBtc)}<span style="font-size:12px"> BTC</span></div><div class="ss">${fU(sf.totalShortUsd)} · ${fK(sf.totalShortUsd)}<br>${r.failYr}년부터 자금 부족</div></div>`;
+    } else if(mode==='C'){
+      const lastPrice=usedPrice(P.retireYr+P.lifeYrs-1);
+      const debtBtc2=lastPrice>0?r.totalDebt/lastPrice:0;
+      const inheritBtc=P.btc-debtBtc2;
+      const inheritUsd=inheritBtc*lastPrice;
+      h+=`<div class="scard good"><div class="sl">🎁 상속 가능 (부채 차감)</div><div class="sv" style="color:var(--green)">${fB(inheritBtc>0?inheritBtc:0)}<span style="font-size:12px;color:var(--t3)"> BTC</span></div><div class="ss">${fU(inheritUsd>0?inheritUsd:0)} (${fK(inheritUsd>0?inheritUsd:0)})<br>보유 ${fB(P.btc)} − 부채 ${fB(debtBtc2)} BTC<br>전체 ${P.lifeYrs}년 유지 · 세금 ₩0</div></div>`;
+    } else {
+      h+=`<div class="scard good"><div class="sl">${r.failed?'자금 부족':'✓ 유지 가능'}</div><div class="sv" style="color:var(--green)">${P.lifeYrs}년 전체</div><div class="ss">은퇴 기간 내 자금 충당 완료</div></div>`;
+    }
+  }
+  document.getElementById('summary').innerHTML=h;
+}
+
+// ═══════════ CHART ═══════════
+function renderChart(res, m){
+  const canvas=document.getElementById('chart');
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.parentElement.clientWidth-28;
+  const H=360;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const dk=matchMedia('(prefers-color-scheme:dark)').matches;
+  const rows=res.rows;
+  const pad={t:20,r:14,b:36,l:56};
+  const cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+
+  // Y range
+  let maxV=0;
+  if(m==='A'){
+    maxV=P.btc*1.1;
+  } else if(m==='D'){
+    rows.forEach(r=>{maxV=Math.max(maxV, r.portfolio||0);});
+    maxV*=1.15;
+  } else {
+    rows.forEach(r=>{maxV=Math.max(maxV, r.collateral||0, r.totalDebt||0);});
+    maxV*=1.15;
+  }
+
+  function tx(i){return pad.l+(rows.length>1?i/(rows.length-1):0.5)*cW;}
+  function ty(v){return pad.t+(1-v/maxV)*cH;}
+
+  ctx.fillStyle=dk?'#1a1a1e':'#f0efed';ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle=dk?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const y=pad.t+i/5*cH;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillStyle=dk?'rgba(255,255,255,.3)':'#999';
+    ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='right';
+    const val=maxV*(1-i/5);
+    ctx.fillText(m==='A'?fB(val)+' BTC':fU(val), pad.l-4, y+3);
+  }
+
+  function drawL(data,col,lw,dash){
+    ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.setLineDash(dash||[]);
+    ctx.beginPath();data.forEach((v,i)=>{i===0?ctx.moveTo(tx(i),ty(v)):ctx.lineTo(tx(i),ty(v));});
+    ctx.stroke();ctx.setLineDash([]);
+  }
+
+  if(m==='A'){
+    // BTC 잔량 영역
+    ctx.beginPath();
+    rows.forEach((r,i)=>{i===0?ctx.moveTo(tx(i),ty(r.remaining)):ctx.lineTo(tx(i),ty(r.remaining));});
+    ctx.lineTo(tx(rows.length-1),ty(0));ctx.lineTo(tx(0),ty(0));ctx.closePath();
+    ctx.fillStyle=dk?'rgba(251,146,60,.08)':'rgba(234,88,12,.06)';ctx.fill();
+    drawL(rows.map(r=>r.remaining), dk?'#fb923c':'#ea580c', 2.5);
+    // 매년 매도량 bar
+    const barW=Math.max(2, cW/rows.length*0.6);
+    rows.forEach((r,i)=>{
+      ctx.fillStyle=dk?'rgba(248,113,113,.25)':'rgba(220,38,38,.15)';
+      const h2=r.sold/maxV*cH;
+      ctx.fillRect(tx(i)-barW/2, ty(0)-h2, barW, h2);
+    });
+
+    document.getElementById('legendBar').innerHTML=`
+      <span><i style="background:${dk?'#fb923c':'#ea580c'}"></i>잔여 BTC</span>
+      <span><i style="background:${dk?'rgba(248,113,113,.4)':'rgba(220,38,38,.25)'}"></i>매년 매도량</span>`;
+  } else if(m==='D'){
+    // 나스닥 포트폴리오 영역
+    ctx.beginPath();
+    rows.forEach((r,i)=>{i===0?ctx.moveTo(tx(i),ty(r.portfolio)):ctx.lineTo(tx(i),ty(r.portfolio));});
+    ctx.lineTo(tx(rows.length-1),ty(0));ctx.lineTo(tx(0),ty(0));ctx.closePath();
+    ctx.fillStyle=dk?'rgba(13,148,136,.08)':'rgba(13,148,136,.06)';ctx.fill();
+    drawL(rows.map(r=>r.portfolio), dk?'#2dd4bf':'#0d9488', 2.5);
+    // 인출 bar
+    const barW2=Math.max(2, cW/rows.length*0.6);
+    rows.forEach((r,i)=>{
+      ctx.fillStyle=dk?'rgba(248,113,113,.25)':'rgba(220,38,38,.15)';
+      const h2=(r.actualWithdraw||0)/maxV*cH;
+      ctx.fillRect(tx(i)-barW2/2, ty(0)-h2, barW2, h2);
+    });
+    document.getElementById('legendBar').innerHTML=`
+      <span><i style="background:${dk?'#2dd4bf':'#0d9488'}"></i>포트폴리오 잔액</span>
+      <span><i style="background:${dk?'rgba(248,113,113,.4)':'rgba(220,38,38,.25)'}"></i>매년 인출 (4% 룰)</span>`;
+  } else {
+    // 담보가치 영역
+    ctx.beginPath();
+    rows.forEach((r,i)=>{i===0?ctx.moveTo(tx(i),ty(r.collateral)):ctx.lineTo(tx(i),ty(r.collateral));});
+    rows.slice().reverse().forEach((r,i)=>{ctx.lineTo(tx(rows.length-1-i),ty(0));});
+    ctx.closePath();ctx.fillStyle=dk?'rgba(74,222,128,.05)':'rgba(22,163,74,.04)';ctx.fill();
+
+    // 청산 위험 구간
+    rows.forEach((r,i)=>{
+      if(r.liqRisk){
+        ctx.fillStyle=dk?'rgba(248,113,113,.06)':'rgba(220,38,38,.04)';
+        const w=i>0?tx(i)-tx(i-1):cW/rows.length;
+        ctx.fillRect(tx(i)-w/2,pad.t,w,cH);
+      }
+    });
+
+    drawL(rows.map(r=>r.collateral), dk?'#4ade80':'#16a34a', 2);
+    drawL(rows.map(r=>r.totalDebt), m==='B'?(dk?'#60a5fa':'#2563eb'):(dk?'#a78bfa':'#7c3aed'), 2.5);
+
+    // LTV 한도선
+    drawL(rows.map(r=>r.collateral*P.maxLtv), dk?'#fbbf24':'#d4a040', 1, [6,3]);
+
+    const colLabel=m==='B'?'blue':'purple';
+    document.getElementById('legendBar').innerHTML=`
+      <span><i style="background:${dk?'#4ade80':'#16a34a'}"></i>담보가치</span>
+      <span><i style="background:${m==='B'?(dk?'#60a5fa':'#2563eb'):(dk?'#a78bfa':'#7c3aed')}"></i>누적 부채</span>
+      <span><i style="background:${dk?'#fbbf24':'#d4a040'};height:1px;border-top:2px dashed ${dk?'#fbbf24':'#d4a040'}"></i>대출 한도</span>
+      <span style="color:${dk?'rgba(248,113,113,.6)':'rgba(220,38,38,.3)'}">█ 청산 위험</span>`;
+  }
+
+  // X labels
+  ctx.fillStyle=dk?'rgba(255,255,255,.35)':'#999';
+  ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='center';
+  rows.forEach((r,i)=>{
+    if(rows.length<=20||i%(Math.ceil(rows.length/12))===0||i===rows.length-1)
+      ctx.fillText(String(r.yr),tx(i),H-pad.b+14);
+  });
+
+  window._chartData={rows,pad,cW,cH,W,H,tx,ty,maxV,canvas,mode:m};
+}
+
+function renderCompareChart(rA,rC,rD){
+  const canvas=document.getElementById('chart');
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.parentElement.clientWidth-28;
+  const H=360;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const dk=matchMedia('(prefers-color-scheme:dark)').matches;
+  const n=rA.rows.length;
+  const pad={t:20,r:14,b:36,l:56};
+  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+
+  const maxV=P.btc*1.15;
+  function tx(i){return pad.l+(n>1?i/(n-1):0.5)*cW;}
+  function ty(v){return pad.t+(1-v/maxV)*cH;}
+
+  ctx.fillStyle=dk?'#1a1a1e':'#f0efed';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle=dk?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const y=pad.t+i/5*cH;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillStyle=dk?'rgba(255,255,255,.3)':'#999';ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='right';
+    ctx.fillText(fB(maxV*(1-i/5))+' BTC',pad.l-4,y+3);
+  }
+
+  function drawL(data,col,lw,dash){
+    ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.setLineDash(dash||[]);
+    ctx.beginPath();data.forEach((v,i)=>{i===0?ctx.moveTo(tx(i),ty(v)):ctx.lineTo(tx(i),ty(v));});
+    ctx.stroke();ctx.setLineDash([]);
+  }
+
+  drawL(rA.rows.map(r=>r.remaining), dk?'#fb923c':'#ea580c', 2.5);
+  drawL(rC.rows.map(r=>r.btcHeld), dk?'#a78bfa':'#7c3aed', 2.5);
+
+  ctx.fillStyle=dk?'rgba(255,255,255,.35)':'#999';ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='center';
+  rA.rows.forEach((r,i)=>{if(n<=20||i%(Math.ceil(n/12))===0||i===n-1)ctx.fillText(String(r.yr),tx(i),H-pad.b+14);});
+
+  window._chartData={rows:rA.rows,rowsC:rC.rows,pad,cW,cH,W,H,tx,ty,maxV,canvas,mode:'ALL'};
+
+  document.getElementById('legendBar').innerHTML=`
+    <span><i style="background:${dk?'#fb923c':'#ea580c'}"></i>A: 잔여 BTC (매도)</span>
+    <span><i style="background:${dk?'#a78bfa':'#7c3aed'}"></i>B: 잔여 BTC (HODL=고정)</span>`;
+}
+
+// ═══════════ TABLE ═══════════
+function renderTable(res, m){
+  let h='<thead><tr><th>연도</th>';
+  if(m==='D'){
+    h+='<th>포트폴리오</th><th>4%룰 인출</th><th>세금</th><th>실수령(원)</th><th>잔액</th><th>상태</th>';
+  } else if(m==='A'){
+    h+='<th>BTC 가격</th><th>연 생활비</th><th>매도 BTC</th><th>세금</th><th>잔여 BTC</th><th>잔여 가치</th><th>상태</th>';
+  } else {
+    h+='<th>BTC 가격</th><th>잔여 BTC</th><th>담보가치</th><th>연 생활비</th><th>이자</th><th>대출</th><th>누적부채</th><th>LTV</th><th>LTV(지지)</th><th>상태</th>';
+  }
+  h+='</tr></thead><tbody>';
+
+  for(const r of res.rows){
+    h+=`<tr><td>${r.yr}</td>`;
+    if(m==='D'){
+      const cls=r.shortfall>(r.withdraw4pct||1)*0.01?'td-warn':'td-ok';
+      h+=`<td>${fU(r.portfolio+r.actualWithdraw)}</td><td>${fU(r.actualWithdraw)}</td><td class="td-warn">${fU(r.taxUsd||0)}</td><td>₩${fKs(r.withdrawKrw)}</td><td>${fU(r.portfolio)}</td>`;
+      h+=`<td><span class="${cls}">${r.shortfall>(r.withdraw4pct||1)*0.01?'⚠ 소진':'✓'}</span></td>`;
+    } else if(m==='A'){
+      const cls=r.shortfall>(r.needed||1)*0.01?'td-warn':'td-ok';
+      h+=`<td>${fU(r.price)}</td><td>₩${fKs(r.aKrw)}</td><td>${fB(r.sold)}</td><td class="td-warn">${fU(r.taxUsd||0)}</td><td>${fB(r.remaining)}</td><td>${fU(r.remainValue)}</td>`;
+      h+=`<td><span class="${cls}">${r.shortfall>(r.needed||1)*0.01?'⚠ 부족':'✓'}</span></td>`;
+    } else {
+      const lc=r.currentLtv>0.6?'td-warn':r.currentLtv>0.4?'td-caution':'td-ok';
+      const wc=r.worstLtv>=P.liqLtv?'td-warn':r.worstLtv>0.6?'td-caution':'td-ok';
+      let st='<span class="td-ok">✓</span>';
+      if(r.liqRisk) st='<span class="td-warn">⚠ 청산</span>';
+      else if(r.shortfall>(r.aUsd||r.totalNeed||1)*0.01) st='<span class="td-warn">부족</span>';
+      h+=`<td>${fB(r.btcHeld)}</td><td>${fU(r.collateral)}</td><td>₩${fKs(r.aKrw)}</td>`;
+      h+=`<td>${fU(r.interest||0)}</td><td>${fU(r.borrow)}</td><td>${fU(r.totalDebt)}</td>`;
+      h+=`<td class="${lc}">${fP(r.currentLtv)}</td><td class="${wc}">${r.worstLtv>=10?'∞':fP(r.worstLtv)}</td>`;
+      h+=`<td>${st}</td>`;
+    }
+    h+='</tr>';
+  }
+  h+='</tbody>';
+  document.getElementById('tbl').innerHTML=h;
+}
+
+function renderCompareTable(rA,rC,rD){
+  let h='<thead><tr><th>연도</th><th>BTC 가격</th><th>A 잔여</th><th>A 세금</th><th>B 잔여</th><th>B 부채</th><th>C 나스닥</th></tr></thead><tbody>';
+  for(let i=0;i<rA.rows.length;i++){
+    const a=rA.rows[i],c=rC.rows[i],d=rD.rows[i];
+    h+=`<tr><td>${a.yr}</td><td>${fU(a.price)}</td>`;
+    h+=`<td>${fB(a.remaining)}</td><td>${fU(a.taxUsd||0)}</td>`;
+    h+=`<td>${fB(c.btcHeld)}</td><td>${fU(c.totalDebt)}</td>`;
+    h+=`<td>${fU(d.portfolio)}</td>`;
+    h+='</tr>';
+  }
+  h+='</tbody>';
+  document.getElementById('tbl').innerHTML=h;
+}
+
+// ═══════════ COMPARE PANELS ═══════════
+function renderCompare(rA,rC,rD){
+  const el=document.getElementById('compareArea');
+  if(mode!=='ALL'){el.style.display='none';return;}
+  el.style.display='grid';
+  el.style.gridTemplateColumns='1fr 1fr 1fr';
+  const lastYr=P.retireYr+P.lifeYrs-1;
+  const endPrice=usedPrice(lastYr);
+
+  function panelHtml(tag, label, desc, res, col){
+    const endBtc=res.remaining!==undefined?res.remaining:res.btcHeld;
+    const sf=shortfallInfo(res);
+    const net=res.remainValueUsd-(res.totalDebt||0);
+    return `<div class="panel">
+      <div class="panel-title"><span class="tag ${tag}">${label}</span>${desc}</div>
+      <div style="font-size:11px;color:var(--t2);line-height:2.1">
+        ${endBtc!==undefined&&endBtc>0?'<b>잔여 BTC:</b> <span style="color:var('+col+')">'+fB(endBtc)+'</span> ('+fK(endBtc*endPrice)+')<br>':''}
+        ${res.portfolio!==undefined?'<b>잔액:</b> <span style="color:var('+col+')">'+fU(res.portfolio)+'</span> ('+fK(res.portfolio)+')<br>':''}
+        ${res.totalDebt!==undefined&&res.totalDebt>0?'<b>최종 부채:</b> '+fU(res.totalDebt)+' ('+fK(res.totalDebt)+')<br>':''}
+        <b>순자산:</b> <span style="color:var(--green)">${fU(net)}</span> (${fK(net)})<br>
+        ${res.totalSold!==undefined&&res.totalSold>0?'<b>총 매도:</b> '+fB(res.totalSold)+' BTC<br>':''}
+        ${res.totalTaxUsd!==undefined&&res.totalTaxUsd>0?'<b>총 세금:</b> <span style="color:var(--red)">'+fU(res.totalTaxUsd)+'</span><br>':''}
+        ${res.totalWithdrawn!==undefined?'<b>총 인출:</b> '+fU(res.totalWithdrawn)+'<br>':''}
+        ${res.failed?'<span style="color:var(--red)">⚠ '+res.failYr+'년 자금부족</span>':'<span style="color:var(--green)">✓ 기간 내 유지</span>'}
+        ${sf?'<br><span style="color:var(--red)">부족분: 현재 '+fB(sf.nowBtc)+' BTC ('+fK(sf.totalShortUsd)+')</span>':''}
+      </div>
+    </div>`;
+  }
+
+  const rDfix={...rD, remainValueUsd:rD.rows[rD.rows.length-1].portfolio};
+
+  el.innerHTML=
+    panelHtml('tagA','전략 A','매년 BTC 매도',rA,'--orange')+
+    panelHtml('tagC','전략 B','순수 HODL 대출',rC,'--purple')+
+    panelHtml('tagC','전략 C','나스닥100 4%룰',rDfix,'--teal');
+}
+
+function renderNote(){
+  document.getElementById('noteBox').innerHTML=`
+    ※ <b>전략 A</b>: 매년 생활비만큼 BTC를 매도. BTC 수량이 줄어듦. 양도세 ${Math.round(P.taxRate*100)}% 적용.<br>
+    <b>전략 B</b>: 생활비 + 이자 전부 대출 (순수 HODL). BTC는 그대로, 부채가 성장. <b>세금 0</b>.<br>
+    <b>전략 C</b>: 같은 금액을 나스닥100에 투자 (CAGR ${Math.round(P.cagr*100)}%). 은퇴 후 4% 룰로 인출. 양도세 ${Math.round(P.taxRate*100)}% 적용.<br>
+    <b>양도세</b>: 전략A·C 매도 시 ${Math.round(P.taxRate*100)}% 적용. 의제취득가=2026년말 추세선(${fU(DEEMED_COST)}). 연 250만원 공제. <b>전략B는 매도 없어 세금 0</b>.<br>
+    <b>가격 기준</b>: ${['추세선 (멱법칙 중앙)','중간 (추세선×지지선 기하평균)','지지선 (감쇠함수 하단, 최악 시나리오)'][P.basis]}.<br>
+    <b>부족 시</b>: 총 부족 금액을 2026년 현재 BTC 가격(${fU(NOW_PRICE)})과 원화로 환산 표시.<br>
+    <b>청산 위험</b>: 감쇠함수 지지선 기준 worst-case LTV가 청산 기준(${Math.round(P.liqLtv*100)}%) 초과 시 표시.<br>
+    실제 가격은 추세선 대비 큰 변동이 있으며 · 세금·수수료·환율 변동 미반영 · 참고용 시뮬레이션입니다.
+  `;
+}
+
+// ═══════════ TOOLTIP ═══════════
+const tipEl=document.getElementById('tip');
+const chartCanvas=document.getElementById('chart');
+chartCanvas.addEventListener('mousemove',e=>{
+  const c=window._chartData;if(!c)return;
+  const rect=chartCanvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  if(mx<c.pad.l||mx>c.W-c.pad.r||my<c.pad.t||my>c.H-c.pad.b){tipEl.style.display='none';return;}
+  const idx=Math.round((mx-c.pad.l)/c.cW*(c.rows.length-1));
+  if(idx<0||idx>=c.rows.length){tipEl.style.display='none';return;}
+  const r=c.rows[idx];
+  let html=`<div style="color:var(--t3);margin-bottom:2px">${r.yr}년 · BTC ${fU(r.price)}</div>`;
+  if(c.mode==='A'){
+    html+=`<div style="color:var(--orange)">잔여: ${fB(r.remaining)} BTC</div>`;
+    html+=`<div>매도: ${fB(r.sold)} BTC</div>`;
+    html+=`<div>가치: ${fU(r.remainValue)}</div>`;
+  } else if(c.mode==='ALL'){
+    html+=`<div style="color:var(--orange)">A 잔여: ${fB(r.remaining)} BTC</div>`;
+    if(c.rowsC) html+=`<div style="color:var(--purple)">B 잔여: ${fB(c.rowsC[idx].btcHeld)} BTC</div>`;
+  } else {
+    html+=`<div>잔여: ${fB(r.btcHeld)} BTC</div>`;
+    html+=`<div style="color:var(--green)">담보: ${fU(r.collateral)}</div>`;
+    html+=`<div style="color:var(--blue)">부채: ${fU(r.totalDebt)}</div>`;
+    html+=`<div>LTV: ${fP(r.currentLtv)}</div>`;
+    if(r.liqRisk) html+=`<div style="color:var(--red);font-weight:600">⚠ 청산 위험</div>`;
+  }
+  tipEl.innerHTML=html;tipEl.style.display='block';
+  let ttx=e.clientX+16,tty=e.clientY-10;
+  if(ttx+tipEl.offsetWidth>window.innerWidth-8)ttx=e.clientX-tipEl.offsetWidth-12;
+  if(tty<56)tty=56;
+  tipEl.style.left=ttx+'px';tipEl.style.top=tty+'px';
+});
+chartCanvas.addEventListener('mouseleave',()=>{tipEl.style.display='none';});
+
+// ═══════════ TABS ═══════════
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',function(){
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    this.classList.add('active');
+    mode=this.dataset.m;
+    render();
+  });
+});
+
+// ═══════════ SLIDERS ═══════════
+['sBtc','sYr','sLife','sExp','sRate','sLtv','sLiq','sInf','sCagr','sTax','sBasis'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',render);
+});
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',render);
+render();
+});
+</script>
+</body>
+</html>
